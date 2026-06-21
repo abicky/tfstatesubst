@@ -1,0 +1,149 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy # Download all the packages listed in go.sum
+    - go install github.com/Songmu/gocredits/cmd/gocredits@ed7b95e15f71633331449fcd208f2f512e275412 # v0.4.0
+    - gocredits -w .
+builds:
+  - &build_base
+    id: all
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -X github.com/abicky/tfstatesubst/cmd.version={{.Version}} -X github.com/abicky/tfstatesubst/cmd.revision={{.ShortCommit}}
+  - <<: *build_base
+    id: azurerm
+    tags:
+      - no_gcs
+      - no_s3
+      - no_tfe
+  - <<: *build_base
+    id: gcs
+    tags:
+      - no_azurerm
+      - no_s3
+      - no_tfe
+  - <<: *build_base
+    id: s3
+    tags:
+      - no_azurerm
+      - no_gcs
+      - no_tfe
+  - <<: *build_base
+    id: tfe
+    tags:
+      - no_azurerm
+      - no_gcs
+      - no_s3
+archives:
+  - &archive_base
+    id: all
+    ids:
+      - all
+    # Exclude the version to download the latest version via https://github.com/abicky/tfstatesubst/releases/latest/download/$archive_name
+    name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
+    files:
+      - LICENSE
+      - README.md
+      - CREDITS
+    wrap_in_directory: true
+  - <<: *archive_base
+    id: azurerm
+    ids:
+      - azurerm
+    name_template: '{{ .ProjectName }}_azurerm_{{ .Os }}_{{ .Arch }}'
+  - <<: *archive_base
+    id: gcs
+    ids:
+      - gcs
+    name_template: '{{ .ProjectName }}_gcs_{{ .Os }}_{{ .Arch }}'
+  - <<: *archive_base
+    id: s3
+    ids:
+      - s3
+    name_template: '{{ .ProjectName }}_s3_{{ .Os }}_{{ .Arch }}'
+  - <<: *archive_base
+    id: tfe
+    ids:
+      - tfe
+    name_template: '{{ .ProjectName }}_tfe_{{ .Os }}_{{ .Arch }}'
+homebrew_casks:
+  - ids:
+      - all
+    repository:
+      owner: abicky
+      name: homebrew-tools
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/abicky/tfstatesubst"
+    description: "Substitute Terraform state values into restricted Go templates"
+    generate_completions_from_executable:
+      executable: tfstatesubst
+      args:
+        - completion
+      shell_parameter_format: cobra
+kos:
+  - &ko_base
+    id: all
+    repositories:
+      - abicky/tfstatesubst
+      - ghcr.io/abicky/tfstatesubst
+    tags:
+      - "{{ .Major }}.{{ .Minor }}"
+      - "{{ .Version }}"
+      - latest
+    bare: true
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    # Disable SBOM because Cosign SBOM attachments are deprecated
+    # cf. https://github.com/sigstore/cosign/blob/main/specs/SBOM_SPEC.md
+    sbom: none
+  - <<: *ko_base
+    id: azurerm
+    tags:
+      - "{{ .Major }}.{{ .Minor }}-azurerm"
+      - "{{ .Version }}-azurerm"
+    flags:
+      - -tags=no_gcs,no_s3,no_tfe
+  - <<: *ko_base
+    id: gcs
+    tags:
+      - "{{ .Major }}.{{ .Minor }}-gcs"
+      - "{{ .Version }}-gcs"
+    flags:
+      - -tags=no_azurerm,no_s3,no_tfe
+  - <<: *ko_base
+    id: s3
+    tags:
+      - "{{ .Major }}.{{ .Minor }}-s3"
+      - "{{ .Version }}-s3"
+    flags:
+      - -tags=no_azurerm,no_gcs,no_tfe
+  - <<: *ko_base
+    id: tfe
+    tags:
+      - "{{ .Major }}.{{ .Minor }}-tfe"
+      - "{{ .Version }}-tfe"
+    flags:
+      - -tags=no_azurerm,no_gcs,no_s3
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  version_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+release:
+  use_existing_draft: true

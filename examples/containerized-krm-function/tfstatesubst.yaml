@@ -1,0 +1,15 @@
+apiVersion: example.com/v1alpha1
+kind: TfstatesubstTransformer
+metadata:
+  name: tfstatesubst
+  annotations:
+    config.kubernetes.io/function: |
+      container:
+        image: ghcr.io/abicky/tfstatesubst:latest
+        mounts:
+          - type: bind
+            src: terraform.tfstate
+            dst: /workspace/terraform.tfstate
+        envs:
+          - TFSTATESUBST_TFSTATE=/workspace/terraform.tfstate
+          - TFSTATESUBST_ALLOW_REFERENCE_EXPRESSION=^(?:azurerm_key_vault\.example\.name|azurerm_user_assigned_identity\.workload\.client_id|data\.azurerm_client_config\.current\.tenant_id)$

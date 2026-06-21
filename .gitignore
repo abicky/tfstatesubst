@@ -1,0 +1,4 @@
+/tfstatesubst
+/bin/
+*.tfstate
+*.tfstate.*
