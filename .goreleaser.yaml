@@ -90,6 +90,12 @@ homebrew_casks:
       args:
         - completion
       shell_parameter_format: cobra
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/tfstatesubst"]
+          end
 kos:
   - &ko_base
     id: all
