@@ -1,6 +1,6 @@
 module github.com/abicky/tfstatesubst
 
-go 1.25.0
+go 1.26.5
 
 require (
 	github.com/fujiwara/tfstate-lookup v1.12.1
